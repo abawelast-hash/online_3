@@ -118,6 +118,29 @@ $badgeClass = $todayStatus === 'checked_in' ? 'in' : ($todayStatus === 'checked_
 
 <body style="--logo-bg:url('<?= SITE_URL ?>/assets/images/loogo.png')">
 
+  <?php
+  // اختيار صور عشوائية للخلفية
+  $imgDir = __DIR__ . '/../img';
+  $bgImages = [];
+  if (is_dir($imgDir)) {
+    $allImgs = array_filter(scandir($imgDir), function($f) use ($imgDir) {
+      return is_file($imgDir . '/' . $f) && preg_match('/\.(jpg|jpeg|png|webp)$/i', $f);
+    });
+    $allImgs = array_values($allImgs);
+    if (count($allImgs) > 0) {
+      shuffle($allImgs);
+      $bgImages = array_slice($allImgs, 0, min(4, count($allImgs)));
+    }
+  }
+  ?>
+  <?php if (!empty($bgImages)): ?>
+  <div class="bg-decor">
+    <?php foreach ($bgImages as $i => $img): ?>
+      <img src="<?= SITE_URL ?>/img/<?= rawurlencode($img) ?>" alt="" class="bg-i<?= $i + 1 ?>" loading="lazy">
+    <?php endforeach; ?>
+  </div>
+  <?php endif; ?>
+
   <?php if ($error): ?>
     <!-- ERROR PAGE — no device overlay needed -->
   <?php else: ?>
@@ -252,7 +275,11 @@ $badgeClass = $todayStatus === 'checked_in' ? 'in' : ($todayStatus === 'checked_
 
     <!-- FLOATING SECRET REPORT BUTTON -->
     <button class="sr-float-btn" onclick="openReportModal()" title="تقرير سري">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20" style="display:block;margin:auto"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20" style="display:block;margin:auto">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+        <line x1="12" y1="8" x2="12" y2="12" />
+        <line x1="12" y1="16" x2="12.01" y2="16" />
+      </svg>
     </button>
 
     <!-- SECRET REPORT MODAL -->
@@ -356,7 +383,7 @@ $badgeClass = $todayStatus === 'checked_in' ? 'in' : ($todayStatus === 'checked_
         <div class="sr-success" id="srSuccess" style="display:none">
           <div style="font-size:3rem;margin-bottom:12px">✅</div>
           <div style="font-size:1.1rem;font-weight:800;margin-bottom:8px">تم إرسال التقرير بنجاح</div>
-          <div style="font-size:.82rem;color:#94A3B8;margin-bottom:16px">شكراً لمساهمتك في تحسين بيئة العمل</div>
+          <div style="font-size:.82rem;color:#64748B;margin-bottom:16px">شكراً لمساهمتك في تحسين بيئة العمل</div>
           <button class="sr-submit" onclick="closeReportModal()">إغلاق</button>
         </div>
       </div>
@@ -366,13 +393,13 @@ $badgeClass = $todayStatus === 'checked_in' ? 'in' : ($todayStatus === 'checked_
     <div class="sr-modal-overlay" id="micPermModal">
       <div class="sr-modal" style="max-width:380px;border-radius:22px;text-align:center;padding:28px 22px">
         <div style="font-size:3rem;margin-bottom:12px">🎙️</div>
-        <div style="font-size:1.05rem;font-weight:800;color:#F1F5F9;margin-bottom:8px">يلزم إذن المايكروفون</div>
-        <div style="font-size:.82rem;color:#94A3B8;margin-bottom:18px;line-height:1.6">
+        <div style="font-size:1.05rem;font-weight:800;color:#1E293B;margin-bottom:8px">يلزم إذن المايكروفون</div>
+        <div style="font-size:.82rem;color:#64748B;margin-bottom:18px;line-height:1.6">
           لتسجيل رسالة صوتية، يجب السماح للمتصفح باستخدام المايكروفون.<br>
           اضغط الزر أدناه لفتح الإعدادات.
         </div>
         <button class="sr-submit" onclick="requestMicPermission()" style="margin-bottom:10px">🔓 السماح بالمايكروفون</button>
-        <button class="sr-submit" onclick="document.getElementById('micPermModal').classList.remove('show')" style="background:#334155;color:#94A3B8">إلغاء</button>
+        <button class="sr-submit" onclick="document.getElementById('micPermModal').classList.remove('show')" style="background:#E2E8F0;color:#64748B">إلغاء</button>
       </div>
     </div>
   <?php endif; ?>

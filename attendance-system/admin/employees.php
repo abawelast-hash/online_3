@@ -228,7 +228,8 @@ try {
             'count' => (int)$row['usage_count'],
         ];
     }
-} catch (Exception $e) { /* الجدول قد لا يكون موجوداً بعد */ }
+} catch (Exception $e) { /* الجدول قد لا يكون موجوداً بعد */
+}
 
 // جلب الفروع لعرضها في القوائم
 $allBranches = db()->query("SELECT id, name FROM branches WHERE is_active = 1 ORDER BY name")->fetchAll();

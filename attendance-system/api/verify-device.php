@@ -47,7 +47,8 @@ try {
             KEY idx_emp (employee_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ");
-} catch (Exception $e) { /* تجاهل */ }
+} catch (Exception $e) { /* تجاهل */
+}
 
 // جلب الموظف
 $stmt = db()->prepare("SELECT id, name, device_fingerprint, device_bind_mode FROM employees WHERE unique_token = ? AND is_active = 1");
@@ -67,7 +68,8 @@ try {
         ON DUPLICATE KEY UPDATE usage_count = usage_count + 1, last_used_at = NOW()
     ");
     $upsert->execute([$fingerprint, $employee['id']]);
-} catch (Exception $e) { /* تجاهل */ }
+} catch (Exception $e) { /* تجاهل */
+}
 
 $bindMode = (int)($employee['device_bind_mode'] ?? 0);
 

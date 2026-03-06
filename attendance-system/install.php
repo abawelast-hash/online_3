@@ -17,9 +17,10 @@ if (file_exists($_envFile)) {
         if ($_line === '' || $_line[0] === '#') continue;
         if (strpos($_line, '=') === false) continue;
         [$_key, $_val] = explode('=', $_line, 2);
-        $_key = trim($_key); $_val = trim($_val);
+        $_key = trim($_key);
+        $_val = trim($_val);
         if (preg_match('/^(["\'])(.*)\\1$/', $_val, $_m)) $_val = $_m[2];
-        if (in_array($_key, ['DB_HOST','DB_USER','DB_PASS','DB_NAME'])) {
+        if (in_array($_key, ['DB_HOST', 'DB_USER', 'DB_PASS', 'DB_NAME'])) {
             // Override default constants — use runkit or just store in variable
             $_ENV[$_key] = $_val;
         }
@@ -58,7 +59,8 @@ try {
     // الاتصال بـ MySQL مع تحديد قاعدة البيانات مباشرة (استضافة مشتركة)
     $pdo = new PDO(
         "mysql:host=" . $_dbHost . ";dbname=" . $_dbName . ";charset=utf8mb4",
-        $_dbUser, $_dbPass,
+        $_dbUser,
+        $_dbPass,
         [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
     );
     $log[] = '✅ تم الاتصال بقاعدة البيانات: ' . $_dbName;
@@ -246,13 +248,13 @@ try {
         ['work_end_time',       '16:00', 'نهاية الدوام الرسمي'],
         ['check_in_start_time', '07:00', 'بداية وقت تسجيل الدخول'],
         ['check_in_end_time',   '10:00', 'نهاية وقت تسجيل الدخول'],
-        ['check_out_start_time','15:00', 'بداية وقت تسجيل الانصراف'],
+        ['check_out_start_time', '15:00', 'بداية وقت تسجيل الانصراف'],
         ['check_out_end_time',  '20:00', 'نهاية وقت تسجيل الانصراف'],
-        ['checkout_show_before','30',    'دقائق قبل إظهار زر الانصراف'],
+        ['checkout_show_before', '30',    'دقائق قبل إظهار زر الانصراف'],
         // الدوام الإضافي
         ['allow_overtime',      '1',     'السماح بالدوام الإضافي'],
-        ['overtime_start_after','60',    'دقائق بعد نهاية الدوام لبدء الإضافي'],
-        ['overtime_min_duration','30',   'الحد الأدنى للدوام الإضافي بالدقائق'],
+        ['overtime_start_after', '60',    'دقائق بعد نهاية الدوام لبدء الإضافي'],
+        ['overtime_min_duration', '30',   'الحد الأدنى للدوام الإضافي بالدقائق'],
         // إعدادات عامة
         ['site_name',           'نظام الحضور والانصراف', 'اسم النظام'],
         ['company_name',        '',      'اسم الشركة'],
@@ -357,7 +359,6 @@ try {
     // =================== كتابة ملف القفل =================== 
     file_put_contents($lockFile, date('Y-m-d H:i:s'));
     $log[] = '🔒 تم إنشاء ملف القفل (install.lock)';
-
 } catch (PDOException $e) {
     $success = false;
     $log[]   = '❌ خطأ: ' . $e->getMessage();
@@ -367,46 +368,117 @@ try {
 ?>
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>تثبيت النظام</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0F172A; color: #E2E8F0; padding: 40px 20px; }
-        .container { max-width: 700px; margin: auto; background: #1E293B; border-radius: 16px; padding: 36px; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
-        h1 { color: #D4A841; font-size: 1.8rem; margin-bottom: 24px; text-align: center; }
-        .log-item { padding: 10px 14px; margin: 8px 0; border-radius: 8px; font-size: .95rem; background: #0F172A; border-right: 4px solid #D4A841; }
-        .success-box { background: #064E3B; border-right-color: #10B981; }
-        .error-box   { background: #7F1D1D; border-right-color: #EF4444; }
-        .btn { display: inline-block; margin-top: 24px; padding: 12px 28px; background: #D4A841; color: #0F172A; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 1rem; }
-        .btn:hover { background: #B8922A; }
-        .creds { background: #1E3A5F; border: 1px solid #3B82F6; border-radius: 8px; padding: 16px; margin-top: 20px; }
-        .creds p { margin: 6px 0; font-size: .9rem; }
-        .creds strong { color: #93C5FD; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0F172A;
+            color: #E2E8F0;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: auto;
+            background: #1E293B;
+            border-radius: 16px;
+            padding: 36px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, .5);
+        }
+
+        h1 {
+            color: #D4A841;
+            font-size: 1.8rem;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+
+        .log-item {
+            padding: 10px 14px;
+            margin: 8px 0;
+            border-radius: 8px;
+            font-size: .95rem;
+            background: #0F172A;
+            border-right: 4px solid #D4A841;
+        }
+
+        .success-box {
+            background: #064E3B;
+            border-right-color: #10B981;
+        }
+
+        .error-box {
+            background: #7F1D1D;
+            border-right-color: #EF4444;
+        }
+
+        .btn {
+            display: inline-block;
+            margin-top: 24px;
+            padding: 12px 28px;
+            background: #D4A841;
+            color: #0F172A;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 1rem;
+        }
+
+        .btn:hover {
+            background: #B8922A;
+        }
+
+        .creds {
+            background: #1E3A5F;
+            border: 1px solid #3B82F6;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 20px;
+        }
+
+        .creds p {
+            margin: 6px 0;
+            font-size: .9rem;
+        }
+
+        .creds strong {
+            color: #93C5FD;
+        }
     </style>
 </head>
-<body>
-<div class="container">
-    <h1>🚀 تثبيت نظام الحضور والانصراف</h1>
-    <?php foreach ($log as $line): ?>
-        <div class="log-item <?= str_contains($line, '❌') ? 'error-box' : 'success-box' ?>">
-            <?= htmlspecialchars($line) ?>
-        </div>
-    <?php endforeach; ?>
 
-    <?php if ($success): ?>
-        <div class="creds">
-            <p>🔑 <strong>بيانات دخول لوحة التحكم:</strong></p>
-            <p>رابط: <strong><?= defined('SITE_URL') ? '' : 'yourdomain.com' ?>/admin/login.php</strong></p>
-            <p>المستخدم: <strong>admin</strong></p>
-            <p>كلمة المرور: <strong>Admin@1234</strong></p>
-            <p style="color:#FCD34D;margin-top:8px;">⚠️ غيّر كلمة المرور فور تسجيل الدخول!</p>
-        </div>
-        <a href="admin/login.php" class="btn">الذهاب إلى لوحة التحكم →</a>
-    <?php else: ?>
-        <p style="color:#FCA5A5;margin-top:16px;">حدث خطأ. تحقق من بيانات الاتصال في أعلى الملف.</p>
-    <?php endif; ?>
-</div>
+<body>
+    <div class="container">
+        <h1>🚀 تثبيت نظام الحضور والانصراف</h1>
+        <?php foreach ($log as $line): ?>
+            <div class="log-item <?= str_contains($line, '❌') ? 'error-box' : 'success-box' ?>">
+                <?= htmlspecialchars($line) ?>
+            </div>
+        <?php endforeach; ?>
+
+        <?php if ($success): ?>
+            <div class="creds">
+                <p>🔑 <strong>بيانات دخول لوحة التحكم:</strong></p>
+                <p>رابط: <strong><?= defined('SITE_URL') ? '' : 'yourdomain.com' ?>/admin/login.php</strong></p>
+                <p>المستخدم: <strong>admin</strong></p>
+                <p>كلمة المرور: <strong>Admin@1234</strong></p>
+                <p style="color:#FCD34D;margin-top:8px;">⚠️ غيّر كلمة المرور فور تسجيل الدخول!</p>
+            </div>
+            <a href="admin/login.php" class="btn">الذهاب إلى لوحة التحكم →</a>
+        <?php else: ?>
+            <p style="color:#FCA5A5;margin-top:16px;">حدث خطأ. تحقق من بيانات الاتصال في أعلى الملف.</p>
+        <?php endif; ?>
+    </div>
 </body>
+
 </html>
