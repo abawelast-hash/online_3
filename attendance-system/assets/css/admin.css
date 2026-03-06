@@ -518,20 +518,11 @@ hr { border:none; border-top:1px solid var(--border); margin:20px 0; }
 
 /* ── Print ── */
 @media print {
-    .sidebar, .topbar, .btn, .pagination, .hamburger, .live-indicator, .bottom-nav, .bg-decor { display:none !important; }
+    .sidebar, .topbar, .btn, .pagination, .hamburger, .live-indicator, .bottom-nav { display:none !important; }
     .main-content { margin:0 !important; }
-    body { background:white !important; color:black; }
+    body { background:white; color:black; }
     table { font-size:11px; }
-    .content { padding:0 !important; }
-    .card { border:1px solid #ccc; box-shadow:none; }
 }
-
-/* ── Background Decoration ── */
-.bg-decor{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
-.bg-decor img{position:absolute;object-fit:cover;border-radius:0}
-.bg-decor .bg-i1{top:0;left:0;width:100%;height:100%;opacity:.018}
-.bg-decor .bg-i2{bottom:-5%;right:-5%;width:55%;height:60%;opacity:.014;border-radius:24px}
-.bg-decor .bg-i3{top:5%;left:10%;width:40%;height:45%;opacity:.01;border-radius:18px}
 
 /* ── Live Indicator ── */
 .live-indicator {

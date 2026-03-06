@@ -118,28 +118,8 @@ $badgeClass = $todayStatus === 'checked_in' ? 'in' : ($todayStatus === 'checked_
 
 <body style="--logo-bg:url('<?= SITE_URL ?>/assets/images/loogo.png')">
 
-  <?php
-  // اختيار صور عشوائية للخلفية
-  $imgDir = __DIR__ . '/../img';
-  $bgImages = [];
-  if (is_dir($imgDir)) {
-    $allImgs = array_filter(scandir($imgDir), function ($f) use ($imgDir) {
-      return is_file($imgDir . '/' . $f) && preg_match('/\.(jpg|jpeg|png|webp)$/i', $f);
-    });
-    $allImgs = array_values($allImgs);
-    if (count($allImgs) > 0) {
-      shuffle($allImgs);
-      $bgImages = array_slice($allImgs, 0, min(4, count($allImgs)));
-    }
-  }
-  ?>
-  <?php if (!empty($bgImages)): ?>
-    <div class="bg-decor">
-      <?php foreach ($bgImages as $i => $img): ?>
-        <img src="<?= SITE_URL ?>/img/<?= rawurlencode($img) ?>" alt="" class="bg-i<?= $i + 1 ?>" loading="lazy">
-      <?php endforeach; ?>
-    </div>
-  <?php endif; ?>
+  <!-- BACKGROUND SLIDESHOW -->
+  <div class="bg-slideshow" id="bgSlideshow"></div>
 
   <?php if ($error): ?>
     <!-- ERROR PAGE — no device overlay needed -->
@@ -383,7 +363,7 @@ $badgeClass = $todayStatus === 'checked_in' ? 'in' : ($todayStatus === 'checked_
         <div class="sr-success" id="srSuccess" style="display:none">
           <div style="font-size:3rem;margin-bottom:12px">✅</div>
           <div style="font-size:1.1rem;font-weight:800;margin-bottom:8px">تم إرسال التقرير بنجاح</div>
-          <div style="font-size:.82rem;color:#64748B;margin-bottom:16px">شكراً لمساهمتك في تحسين بيئة العمل</div>
+          <div style="font-size:.82rem;color:#94A3B8;margin-bottom:16px">شكراً لمساهمتك في تحسين بيئة العمل</div>
           <button class="sr-submit" onclick="closeReportModal()">إغلاق</button>
         </div>
       </div>
@@ -393,13 +373,13 @@ $badgeClass = $todayStatus === 'checked_in' ? 'in' : ($todayStatus === 'checked_
     <div class="sr-modal-overlay" id="micPermModal">
       <div class="sr-modal" style="max-width:380px;border-radius:22px;text-align:center;padding:28px 22px">
         <div style="font-size:3rem;margin-bottom:12px">🎙️</div>
-        <div style="font-size:1.05rem;font-weight:800;color:#1E293B;margin-bottom:8px">يلزم إذن المايكروفون</div>
-        <div style="font-size:.82rem;color:#64748B;margin-bottom:18px;line-height:1.6">
+        <div style="font-size:1.05rem;font-weight:800;color:#F1F5F9;margin-bottom:8px">يلزم إذن المايكروفون</div>
+        <div style="font-size:.82rem;color:#94A3B8;margin-bottom:18px;line-height:1.6">
           لتسجيل رسالة صوتية، يجب السماح للمتصفح باستخدام المايكروفون.<br>
           اضغط الزر أدناه لفتح الإعدادات.
         </div>
         <button class="sr-submit" onclick="requestMicPermission()" style="margin-bottom:10px">🔓 السماح بالمايكروفون</button>
-        <button class="sr-submit" onclick="document.getElementById('micPermModal').classList.remove('show')" style="background:#E2E8F0;color:#64748B">إلغاء</button>
+        <button class="sr-submit" onclick="document.getElementById('micPermModal').classList.remove('show')" style="background:#334155;color:#94A3B8">إلغاء</button>
       </div>
     </div>
   <?php endif; ?>
@@ -427,6 +407,42 @@ $badgeClass = $todayStatus === 'checked_in' ? 'in' : ($todayStatus === 'checked_
     </script>
     <script src="<?= SITE_URL ?>/assets/js/radar.js?v=<?= time() ?>"></script>
     <script>
+      // ── Background Slideshow ──
+      (function() {
+        var imgs = <?= json_encode(array_values(array_map(function ($f) {
+                      return SITE_URL . '/img/' . $f;
+                    }, array_filter(scandir(__DIR__ . '/../img'), function ($f) {
+                      return preg_match('/\\.(jpg|jpeg|png|webp)$/i', $f);
+                    })))) ?>;
+        if (!imgs.length) return;
+        // Shuffle
+        for (var i = imgs.length - 1; i > 0; i--) {
+          var j = Math.floor(Math.random() * (i + 1));
+          var t = imgs[i];
+          imgs[i] = imgs[j];
+          imgs[j] = t;
+        }
+        var container = document.getElementById('bgSlideshow');
+        if (!container) return;
+        var idx = 0;
+        // Create 2 slide layers for crossfade
+        var slideA = document.createElement('div');
+        slideA.className = 'bg-slide active';
+        slideA.style.backgroundImage = 'url("' + imgs[0] + '")';
+        var slideB = document.createElement('div');
+        slideB.className = 'bg-slide';
+        container.appendChild(slideA);
+        container.appendChild(slideB);
+        setInterval(function() {
+          idx = (idx + 1) % imgs.length;
+          var next = (slideA.classList.contains('active')) ? slideB : slideA;
+          var curr = (slideA.classList.contains('active')) ? slideA : slideB;
+          next.style.backgroundImage = 'url("' + imgs[idx] + '")';
+          next.classList.add('active');
+          curr.classList.remove('active');
+        }, 8000);
+      })();
+
       // ── Secret Report Modal Logic ──
       let mediaRecorder = null;
       let audioChunks = [];
