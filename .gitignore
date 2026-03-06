@@ -1,0 +1,24 @@
+# Environment files
+attendance-system/.env
+production.env
+
+# Uploads
+attendance-system/uploads/reports/images/*
+attendance-system/uploads/reports/voices/*
+!attendance-system/uploads/reports/images/.gitkeep
+!attendance-system/uploads/reports/voices/.gitkeep
+
+# Local config
+attendance-system/includes/config.php.local
+
+# Deploy artifacts
+*.zip
+.deploy-credentials
+
+# OS
+Thumbs.db
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
