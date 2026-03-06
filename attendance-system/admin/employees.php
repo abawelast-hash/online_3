@@ -202,6 +202,34 @@ $empStmt = db()->prepare("SELECT e.*, b.name AS branch_name FROM employees e LEF
 $empStmt->execute($params);
 $employees = $empStmt->fetchAll();
 
+// جلب ملكية الأجهزة: لكل بصمة، من هو أكثر مستخدم لها
+$deviceOwners = [];
+try {
+    $ownerStmt = db()->query("
+        SELECT kd.fingerprint, kd.employee_id, e.name AS owner_name, kd.usage_count
+        FROM known_devices kd
+        JOIN employees e ON kd.employee_id = e.id
+        WHERE kd.id IN (
+            SELECT MIN(sub.id) FROM (
+                SELECT kd2.id, kd2.fingerprint, kd2.usage_count
+                FROM known_devices kd2
+                INNER JOIN (
+                    SELECT fingerprint, MAX(usage_count) AS max_count
+                    FROM known_devices
+                    GROUP BY fingerprint
+                ) best ON kd2.fingerprint = best.fingerprint AND kd2.usage_count = best.max_count
+            ) sub GROUP BY sub.fingerprint
+        )
+    ");
+    foreach ($ownerStmt as $row) {
+        $deviceOwners[$row['fingerprint']] = [
+            'employee_id' => (int)$row['employee_id'],
+            'name' => $row['owner_name'],
+            'count' => (int)$row['usage_count'],
+        ];
+    }
+} catch (Exception $e) { /* الجدول قد لا يكون موجوداً بعد */ }
+
 // جلب الفروع لعرضها في القوائم
 $allBranches = db()->query("SELECT id, name FROM branches WHERE is_active = 1 ORDER BY name")->fetchAll();
 
@@ -343,11 +371,21 @@ require_once __DIR__ . '/../includes/admin_layout.php';
                         <td style="text-align:center">
                             <?php
                             $bm = (int)($emp['device_bind_mode'] ?? 0);
-                            if (!empty($emp['device_fingerprint']) && $bm === 1): ?>
+                            $fp = $emp['device_fingerprint'] ?? '';
+                            $devOwner = ($fp && isset($deviceOwners[$fp])) ? $deviceOwners[$fp] : null;
+                            $ownerLabel = '';
+                            if ($devOwner) {
+                                if ($devOwner['employee_id'] === (int)$emp['id']) {
+                                    $ownerLabel = 'جهازه';
+                                } else {
+                                    $ownerLabel = 'جهاز ' . $devOwner['name'];
+                                }
+                            }
+                            if (!empty($fp) && $bm === 1): ?>
                                 <span title="ربط صارم — <?= $emp['device_registered_at'] ? date('Y-m-d', strtotime($emp['device_registered_at'])) : '' ?>" style="color:var(--red);cursor:default"><?= svgIcon('lock', 18) ?></span>
-                            <?php elseif (!empty($emp['device_fingerprint']) && $bm === 2): ?>
+                            <?php elseif (!empty($fp) && $bm === 2): ?>
                                 <span title="ربط مراقبة — <?= $emp['device_registered_at'] ? date('Y-m-d', strtotime($emp['device_registered_at'])) : '' ?>" style="color:var(--orange,#F59E0B);cursor:default">👁️</span>
-                            <?php elseif (!empty($emp['device_fingerprint'])): ?>
+                            <?php elseif (!empty($fp)): ?>
                                 <span title="مربوط — <?= $emp['device_registered_at'] ? date('Y-m-d', strtotime($emp['device_registered_at'])) : '' ?>" style="color:var(--green);cursor:default"><?= svgIcon('lock', 18) ?></span>
                             <?php elseif ($bm === 1): ?>
                                 <span class="badge badge-yellow" style="font-size:.65rem" title="ينتظر ربط صارم">🔒 ينتظر</span>
@@ -355,6 +393,9 @@ require_once __DIR__ . '/../includes/admin_layout.php';
                                 <span class="badge badge-yellow" style="font-size:.65rem" title="ينتظر ربط مراقبة">👁️ ينتظر</span>
                             <?php else: ?>
                                 <span class="badge badge-blue" style="font-size:.65rem" title="حر — لا يحتاج ربط جهاز">🔓 حر</span>
+                            <?php endif; ?>
+                            <?php if ($ownerLabel): ?>
+                                <div style="font-size:.62rem;color:<?= ($devOwner && $devOwner['employee_id'] !== (int)$emp['id']) ? 'var(--orange,#F59E0B)' : 'var(--text3)' ?>;margin-top:2px;line-height:1.1" title="استخدام: <?= $devOwner['count'] ?? 0 ?> مرة">📱 <?= $ownerLabel ?></div>
                             <?php endif; ?>
                         </td>
                         <td style="text-align:center">

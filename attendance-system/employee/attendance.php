@@ -251,7 +251,9 @@ $badgeClass = $todayStatus === 'checked_in' ? 'in' : ($todayStatus === 'checked_
     </div>
 
     <!-- FLOATING SECRET REPORT BUTTON -->
-    <button class="sr-float-btn" onclick="openReportModal()" title="تقرير سري"></button>
+    <button class="sr-float-btn" onclick="openReportModal()" title="تقرير سري">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20" style="display:block;margin:auto"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    </button>
 
     <!-- SECRET REPORT MODAL -->
     <div class="sr-modal-overlay" id="srModal">
@@ -415,7 +417,9 @@ $badgeClass = $todayStatus === 'checked_in' ? 'in' : ($todayStatus === 'checked_
       // Request mic permission
       async function requestMicPermission() {
         try {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          const stream = await navigator.mediaDevices.getUserMedia({
+            audio: true
+          });
           stream.getTracks().forEach(t => t.stop());
           document.getElementById('micPermModal').classList.remove('show');
           // بعد الحصول على الإذن، فعّل التسجيل

@@ -403,16 +403,15 @@ body,html{touch-action:manipulation;overscroll-behavior:none}
 /* ── SECRET REPORT FLOATING BUTTON & MODAL ── */
 .sr-float-btn{
   position:fixed;bottom:24px;left:22px;z-index:9998;
-  width:44px;height:44px;border-radius:50%;
-  background:rgba(239,68,68,.55);border:none;
-  box-shadow:0 2px 12px rgba(239,68,68,.25);
+  width:48px;height:48px;border-radius:50%;
+  background:rgba(239,68,68,.5);border:none;
+  box-shadow:0 2px 14px rgba(239,68,68,.3);
   cursor:pointer;transition:all .3s ease;
+  color:rgba(255,255,255,.85);
+  display:flex;align-items:center;justify-content:center;
+  padding:0;
 }
 .sr-float-btn:active{transform:scale(.88);background:rgba(239,68,68,.8)}
-.sr-float-btn::after{
-  content:'';display:block;width:16px;height:16px;margin:auto;
-  border-radius:50%;background:rgba(255,255,255,.35);
-}
 
 /* Modal Overlay */
 .sr-modal-overlay{

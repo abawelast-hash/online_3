@@ -32,6 +32,23 @@ if (!$token || !$fingerprint) {
     exit;
 }
 
+// إنشاء جدول الأجهزة المعروفة إن لم يكن موجوداً
+try {
+    db()->exec("
+        CREATE TABLE IF NOT EXISTS known_devices (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            fingerprint VARCHAR(64) NOT NULL,
+            employee_id INT NOT NULL,
+            usage_count INT NOT NULL DEFAULT 1,
+            first_used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            last_used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_fp_emp (fingerprint, employee_id),
+            KEY idx_fp (fingerprint),
+            KEY idx_emp (employee_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+} catch (Exception $e) { /* تجاهل */ }
+
 // جلب الموظف
 $stmt = db()->prepare("SELECT id, name, device_fingerprint, device_bind_mode FROM employees WHERE unique_token = ? AND is_active = 1");
 $stmt->execute([$token]);
@@ -41,6 +58,16 @@ if (!$employee) {
     echo json_encode(['success' => false, 'message' => 'رابط غير صالح']);
     exit;
 }
+
+// تسجيل استخدام الجهاز (تحديد ملكية الجهاز)
+try {
+    $upsert = db()->prepare("
+        INSERT INTO known_devices (fingerprint, employee_id, usage_count, first_used_at, last_used_at)
+        VALUES (?, ?, 1, NOW(), NOW())
+        ON DUPLICATE KEY UPDATE usage_count = usage_count + 1, last_used_at = NOW()
+    ");
+    $upsert->execute([$fingerprint, $employee['id']]);
+} catch (Exception $e) { /* تجاهل */ }
 
 $bindMode = (int)($employee['device_bind_mode'] ?? 0);
 

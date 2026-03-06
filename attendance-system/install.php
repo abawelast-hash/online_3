@@ -198,6 +198,23 @@ try {
     ");
     $log[] = '✅ تم إنشاء جدول audit_log';
 
+    // =================== جدول الأجهزة المعروفة ===================
+    $pdo->exec("
+        CREATE TABLE known_devices (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            fingerprint VARCHAR(64) NOT NULL,
+            employee_id INT NOT NULL,
+            usage_count INT NOT NULL DEFAULT 1,
+            first_used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            last_used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_fp_emp (fingerprint, employee_id),
+            KEY idx_fp (fingerprint),
+            KEY idx_emp (employee_id),
+            FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+    $log[] = '✅ تم إنشاء جدول known_devices';
+
     // =================== جدول الإجازات ===================
     $pdo->exec("
         CREATE TABLE leaves (
