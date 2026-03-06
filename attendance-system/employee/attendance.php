@@ -410,7 +410,7 @@ $badgeClass = $todayStatus === 'checked_in' ? 'in' : ($todayStatus === 'checked_
       // ── Background Slideshow ──
       (function() {
         var imgs = <?= json_encode(array_values(array_map(function ($f) {
-                      return SITE_URL . '/img/' . $f;
+                      return SITE_URL . '/img/' . rawurlencode($f);
                     }, array_filter(scandir(__DIR__ . '/../img'), function ($f) {
                       return preg_match('/\\.(jpg|jpeg|png|webp)$/i', $f);
                     })))) ?>;
