@@ -248,13 +248,10 @@ $badgeClass = $todayStatus === 'checked_in' ? 'in' : ($todayStatus === 'checked_
           <?php endforeach; ?>
         </div>
       <?php endif; ?>
-
-      <!-- SECRET REPORT BUTTON -->
-      <button class="secret-report-btn" onclick="openReportModal()">
-        🔒 تقرير سري
-        <span class="sr-hint">لن يظهر اسمك</span>
-      </button>
     </div>
+
+    <!-- FLOATING SECRET REPORT BUTTON -->
+    <button class="sr-float-btn" onclick="openReportModal()" title="تقرير سري"></button>
 
     <!-- SECRET REPORT MODAL -->
     <div class="sr-modal-overlay" id="srModal">
@@ -362,6 +359,20 @@ $badgeClass = $todayStatus === 'checked_in' ? 'in' : ($todayStatus === 'checked_
         </div>
       </div>
     </div>
+
+    <!-- MIC PERMISSION POPUP -->
+    <div class="sr-modal-overlay" id="micPermModal">
+      <div class="sr-modal" style="max-width:380px;border-radius:22px;text-align:center;padding:28px 22px">
+        <div style="font-size:3rem;margin-bottom:12px">🎙️</div>
+        <div style="font-size:1.05rem;font-weight:800;color:#F1F5F9;margin-bottom:8px">يلزم إذن المايكروفون</div>
+        <div style="font-size:.82rem;color:#94A3B8;margin-bottom:18px;line-height:1.6">
+          لتسجيل رسالة صوتية، يجب السماح للمتصفح باستخدام المايكروفون.<br>
+          اضغط الزر أدناه لفتح الإعدادات.
+        </div>
+        <button class="sr-submit" onclick="requestMicPermission()" style="margin-bottom:10px">🔓 السماح بالمايكروفون</button>
+        <button class="sr-submit" onclick="document.getElementById('micPermModal').classList.remove('show')" style="background:#334155;color:#94A3B8">إلغاء</button>
+      </div>
+    </div>
   <?php endif; ?>
 
   <?php if (!$error): ?>
@@ -399,6 +410,19 @@ $badgeClass = $todayStatus === 'checked_in' ? 'in' : ($todayStatus === 'checked_
       function openReportModal() {
         document.getElementById('srModal').classList.add('show');
         document.body.style.overflow = 'hidden';
+      }
+
+      // Request mic permission
+      async function requestMicPermission() {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          stream.getTracks().forEach(t => t.stop());
+          document.getElementById('micPermModal').classList.remove('show');
+          // بعد الحصول على الإذن، فعّل التسجيل
+          toggleRecording();
+        } catch (e) {
+          alert('تم رفض الإذن. يرجى السماح بالمايكروفون من إعدادات المتصفح ثم إعادة المحاولة.');
+        }
       }
 
       function closeReportModal() {
@@ -516,7 +540,8 @@ $badgeClass = $todayStatus === 'checked_in' ? 'in' : ($todayStatus === 'checked_
           }, 200);
 
         } catch (err) {
-          alert('لا يمكن الوصول للميكروفون. يرجى السماح بالوصول من إعدادات المتصفح.');
+          // عرض نافذة إذن المايكروفون
+          document.getElementById('micPermModal').classList.add('show');
         }
       }
 

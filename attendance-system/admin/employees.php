@@ -119,13 +119,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        // --- تفعيل ربط الجهاز (يربط عند الدخول التالي) ---
+        // --- تفعيل ربط صارم (يربط عند الدخول التالي + يمنع الأجهزة المختلفة) ---
         if ($action === 'enable_bind') {
             $id = (int)($_POST['emp_id'] ?? 0);
             if ($id) {
                 db()->prepare("UPDATE employees SET device_bind_mode=1 WHERE id=?")->execute([$id]);
-                auditLog('enable_bind', "تفعيل ربط الجهاز للموظف ID={$id}", $id);
-                $message = "تم تفعيل وضع الربط — سيُربط الجهاز عند الدخول التالي للموظف";
+                auditLog('enable_bind', "تفعيل ربط صارم للموظف ID={$id}", $id);
+                $message = "تم تفعيل الربط الصارم — سيُمنع أي جهاز مختلف";
+                $msgType = 'success';
+            }
+        }
+
+        // --- تفعيل ربط مراقبة (يربط لكن لا يمنع — يسجل التلاعب بصمت) ---
+        if ($action === 'enable_silent_bind') {
+            $id = (int)($_POST['emp_id'] ?? 0);
+            if ($id) {
+                db()->prepare("UPDATE employees SET device_bind_mode=2 WHERE id=?")->execute([$id]);
+                auditLog('enable_silent_bind', "تفعيل ربط مراقبة للموظف ID={$id}", $id);
+                $message = "تم تفعيل ربط المراقبة — سيُسجّل التلاعب بصمت دون منع الموظف";
                 $msgType = 'success';
             }
         }
@@ -138,11 +149,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $msgType = 'success';
         }
 
-        // --- تفعيل الربط التلقائي لجميع الموظفين عند الدخول القادم ---
+        // --- تفعيل الربط الصارم لجميع الموظفين عند الدخول القادم ---
         if ($action === 'enable_bind_all') {
             $result = db()->exec("UPDATE employees SET device_bind_mode=1 WHERE is_active=1 AND deleted_at IS NULL AND device_fingerprint IS NULL");
-            auditLog('enable_bind_all', "تفعيل ربط الجهاز لجميع الموظفين — {$result} موظف");
-            $message = "تم تفعيل الربط التلقائي عند الدخول القادم — {$result} موظف";
+            auditLog('enable_bind_all', "تفعيل ربط صارم لجميع الموظفين — {$result} موظف");
+            $message = "تم تفعيل الربط الصارم للجميع — {$result} موظف";
+            $msgType = 'success';
+        }
+
+        // --- تفعيل ربط المراقبة لجميع الموظفين ---
+        if ($action === 'enable_silent_bind_all') {
+            $result = db()->exec("UPDATE employees SET device_bind_mode=2 WHERE is_active=1 AND deleted_at IS NULL AND device_fingerprint IS NULL");
+            auditLog('enable_silent_bind_all', "تفعيل ربط مراقبة لجميع الموظفين — {$result} موظف");
+            $message = "تم تفعيل ربط المراقبة للجميع — {$result} موظف (يُسجّل التلاعب بصمت)";
             $msgType = 'success';
         }
     }
@@ -241,11 +260,18 @@ require_once __DIR__ . '/../includes/admin_layout.php';
                             <?= svgIcon('lock', 16) ?> فك جميع الأجهزة
                         </button>
                     </form>
-                    <form method="POST" onsubmit="return confirm('تفعيل الربط التلقائي للجميع؟')">
+                    <form method="POST" onsubmit="return confirm('تفعيل الربط الصارم للجميع؟ سيُمنع أي جهاز مختلف.')">
                         <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
                         <input type="hidden" name="action" value="enable_bind_all">
-                        <button type="submit" class="dropdown-item" style="color:var(--green)">
-                            <?= svgIcon('key', 16) ?> تفعيل الربط للجميع
+                        <button type="submit" class="dropdown-item" style="color:var(--red)">
+                            🔒 ربط صارم للجميع
+                        </button>
+                    </form>
+                    <form method="POST" onsubmit="return confirm('تفعيل ربط المراقبة للجميع؟ يُسجّل التلاعب بصمت دون منع.')">
+                        <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
+                        <input type="hidden" name="action" value="enable_silent_bind_all">
+                        <button type="submit" class="dropdown-item" style="color:var(--orange,#F59E0B)">
+                            👁️ ربط مراقبة للجميع
                         </button>
                     </form>
                 </div>
@@ -315,10 +341,18 @@ require_once __DIR__ . '/../includes/admin_layout.php';
                             <?php endif; ?>
                         </td>
                         <td style="text-align:center">
-                            <?php if (!empty($emp['device_fingerprint'])): ?>
-                                <span title="مربوط بجهاز — <?= $emp['device_registered_at'] ? date('Y-m-d', strtotime($emp['device_registered_at'])) : '' ?>" style="color:var(--green);cursor:default"><?= svgIcon('lock', 18) ?></span>
-                            <?php elseif (!empty($emp['device_bind_mode'])): ?>
-                                <span class="badge badge-yellow" style="font-size:.65rem" title="ينتظر ربط الجهاز عند الدخول التالي">⏳ ينتظر</span>
+                            <?php
+                            $bm = (int)($emp['device_bind_mode'] ?? 0);
+                            if (!empty($emp['device_fingerprint']) && $bm === 1): ?>
+                                <span title="ربط صارم — <?= $emp['device_registered_at'] ? date('Y-m-d', strtotime($emp['device_registered_at'])) : '' ?>" style="color:var(--red);cursor:default"><?= svgIcon('lock', 18) ?></span>
+                            <?php elseif (!empty($emp['device_fingerprint']) && $bm === 2): ?>
+                                <span title="ربط مراقبة — <?= $emp['device_registered_at'] ? date('Y-m-d', strtotime($emp['device_registered_at'])) : '' ?>" style="color:var(--orange,#F59E0B);cursor:default">👁️</span>
+                            <?php elseif (!empty($emp['device_fingerprint'])): ?>
+                                <span title="مربوط — <?= $emp['device_registered_at'] ? date('Y-m-d', strtotime($emp['device_registered_at'])) : '' ?>" style="color:var(--green);cursor:default"><?= svgIcon('lock', 18) ?></span>
+                            <?php elseif ($bm === 1): ?>
+                                <span class="badge badge-yellow" style="font-size:.65rem" title="ينتظر ربط صارم">🔒 ينتظر</span>
+                            <?php elseif ($bm === 2): ?>
+                                <span class="badge badge-yellow" style="font-size:.65rem" title="ينتظر ربط مراقبة">👁️ ينتظر</span>
                             <?php else: ?>
                                 <span class="badge badge-blue" style="font-size:.65rem" title="حر — لا يحتاج ربط جهاز">🔓 حر</span>
                             <?php endif; ?>
@@ -366,12 +400,18 @@ require_once __DIR__ . '/../includes/admin_layout.php';
                                             <input type="hidden" name="emp_id" value="<?= $emp['id'] ?>">
                                             <button type="submit" class="dropdown-item"><?= svgIcon('lock', 14) ?> فك ربط الجهاز</button>
                                         </form>
-                                    <?php elseif (empty($emp['device_bind_mode'])): ?>
-                                        <form method="POST" onsubmit="return confirm('تفعيل ربط الجهاز؟')">
+                                    <?php else: ?>
+                                        <form method="POST" onsubmit="return confirm('ربط صارم: سيُمنع أي جهاز مختلف من الدخول')">
                                             <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
                                             <input type="hidden" name="action" value="enable_bind">
                                             <input type="hidden" name="emp_id" value="<?= $emp['id'] ?>">
-                                            <button type="submit" class="dropdown-item" style="color:var(--green)"><?= svgIcon('key', 14) ?> ربط الجهاز</button>
+                                            <button type="submit" class="dropdown-item" style="color:var(--red)">🔒 ربط صارم</button>
+                                        </form>
+                                        <form method="POST" onsubmit="return confirm('ربط مراقبة: يُسمح بالدخول من أي جهاز لكن يُسجّل التلاعب بصمت')">
+                                            <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
+                                            <input type="hidden" name="action" value="enable_silent_bind">
+                                            <input type="hidden" name="emp_id" value="<?= $emp['id'] ?>">
+                                            <button type="submit" class="dropdown-item" style="color:var(--orange,#F59E0B)">👁️ ربط مراقبة</button>
                                         </form>
                                     <?php endif; ?>
                                     <div style="border-top:1px solid var(--border);margin:4px 0"></div>

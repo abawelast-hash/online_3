@@ -1,6 +1,10 @@
 <?php
 // =============================================================
 // api/verify-device.php — التحقق من بصمة الجهاز وتسجيلها
+// وضع الربط:
+//   0 = حر (بدون ربط)
+//   1 = ربط صارم (يمنع الأجهزة المختلفة)
+//   2 = ربط مراقبة (يسمح لكن يسجل تلاعب بصمت)
 // =============================================================
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/functions.php';
@@ -29,7 +33,7 @@ if (!$token || !$fingerprint) {
 }
 
 // جلب الموظف
-$stmt = db()->prepare("SELECT id, device_fingerprint FROM employees WHERE unique_token = ? AND is_active = 1");
+$stmt = db()->prepare("SELECT id, name, device_fingerprint, device_bind_mode FROM employees WHERE unique_token = ? AND is_active = 1");
 $stmt->execute([$token]);
 $employee = $stmt->fetch();
 
@@ -38,43 +42,98 @@ if (!$employee) {
     exit;
 }
 
-// لا توجد بصمة محفوظة → نتحقق من وضع الربط
-if (empty($employee['device_fingerprint'])) {
-    // التحقق إن كان وضع الربط مفعّل من الإدارة
-    $bindStmt = db()->prepare("SELECT device_bind_mode FROM employees WHERE id = ?");
-    $bindStmt->execute([$employee['id']]);
-    $bindMode = (int)($bindStmt->fetchColumn() ?? 0);
+$bindMode = (int)($employee['device_bind_mode'] ?? 0);
 
-    if ($bindMode === 1) {
-        // وضع الربط مفعّل يدوياً من الإدارة → ربط الجهاز
-        $upd = db()->prepare("UPDATE employees SET device_fingerprint = ?, device_registered_at = NOW(), device_bind_mode = 0 WHERE id = ?");
+// ── لا توجد بصمة محفوظة بعد ──
+if (empty($employee['device_fingerprint'])) {
+    if ($bindMode === 1 || $bindMode === 2) {
+        // وضع الربط مفعّل (صارم أو مراقبة) → ربط الجهاز
+        $upd = db()->prepare("UPDATE employees SET device_fingerprint = ?, device_registered_at = NOW() WHERE id = ?");
         $upd->execute([$fingerprint, $employee['id']]);
+
+        // التحقق: هل هذا الجهاز مربوط بموظف آخر أيضاً؟ (تسجيل بالنيابة محتمل)
+        $otherStmt = db()->prepare("SELECT id, name FROM employees WHERE device_fingerprint = ? AND id != ? AND is_active = 1 AND deleted_at IS NULL");
+        $otherStmt->execute([$fingerprint, $employee['id']]);
+        $otherEmp = $otherStmt->fetch();
+        if ($otherEmp) {
+            logTampering($employee['id'], 'proxy_checkin', 'نفس الجهاز مربوط بموظف آخر: ' . $otherEmp['name'], 'medium', [
+                'other_employee_id' => $otherEmp['id'],
+                'other_employee_name' => $otherEmp['name'],
+                'fingerprint' => substr($fingerprint, 0, 12) . '...',
+            ]);
+        }
+
         echo json_encode(['success' => true, 'first_time' => true, 'auto_bound' => true]);
         exit;
     }
 
-    // وضع الربط غير مفعّل → اسمح بالدخول بدون ربط
+    // وضع حر → اسمح بدون ربط
     echo json_encode(['success' => true, 'first_time' => true, 'auto_bound' => false]);
     exit;
 }
 
-// التحقق من البصمة
+// ── بصمة محفوظة — تحقق منها ──
 if (hash_equals($employee['device_fingerprint'], $fingerprint)) {
+    // نفس الجهاز — ممتاز
     echo json_encode(['success' => true, 'first_time' => false]);
-} else {
-    // بصمة مختلفة — نسجل حالة تلاعب محتملة لكن نسمح بالدخول
-    try {
-        $logStmt = db()->prepare("INSERT INTO tampering_cases (employee_id, case_type, description, attendance_date, severity, details_json)
-            VALUES (?, 'different_device', 'تسجيل من جهاز مختلف عن الجهاز المربوط', CURDATE(), 'medium', ?)");
-        $logStmt->execute([$employee['id'], json_encode([
-            'expected' => substr($employee['device_fingerprint'], 0, 12) . '...',
-            'actual' => substr($fingerprint, 0, 12) . '...',
+    exit;
+}
+
+// ── بصمة مختلفة ──
+$details = [
+    'expected' => substr($employee['device_fingerprint'], 0, 12) . '...',
+    'actual' => substr($fingerprint, 0, 12) . '...',
+    'ip' => $_SERVER['REMOTE_ADDR'] ?? '',
+    'time' => date('Y-m-d H:i:s'),
+    'bind_mode' => $bindMode,
+];
+
+if ($bindMode === 1) {
+    // ── وضع صارم: امنع الدخول ──
+    logTampering($employee['id'], 'different_device', 'محاولة دخول من جهاز مختلف (تم المنع)', 'high', $details);
+
+    echo json_encode([
+        'success' => false,
+        'locked' => true,
+        'message' => 'هذا الرابط مربوط بجهاز آخر. لا يمكنك استخدامه من هذا الجهاز.',
+    ]);
+    exit;
+}
+
+if ($bindMode === 2) {
+    // ── وضع مراقبة: اسمح بصمت + سجّل تلاعب ──
+    logTampering($employee['id'], 'different_device', 'تسجيل من جهاز مختلف (وضع مراقبة — لم يُمنع)', 'medium', $details);
+
+    // هل هذا الجهاز مربوط بموظف آخر؟
+    $otherStmt = db()->prepare("SELECT id, name FROM employees WHERE device_fingerprint = ? AND id != ? AND is_active = 1 AND deleted_at IS NULL");
+    $otherStmt->execute([$fingerprint, $employee['id']]);
+    $otherEmp = $otherStmt->fetch();
+    if ($otherEmp) {
+        logTampering($employee['id'], 'proxy_checkin', 'يستخدم جهاز الموظف: ' . $otherEmp['name'] . ' — تسجيل بالنيابة محتمل', 'high', [
+            'other_employee_id' => $otherEmp['id'],
+            'other_employee_name' => $otherEmp['name'],
+            'fingerprint' => substr($fingerprint, 0, 12) . '...',
             'ip' => $_SERVER['REMOTE_ADDR'] ?? '',
-            'time' => date('Y-m-d H:i:s'),
-        ], JSON_UNESCAPED_UNICODE)]);
-    } catch (Exception $e) { /* الجدول قد لا يكون موجوداً */
+        ]);
     }
 
-    // اسمح بالدخول بدون حجب
-    echo json_encode(['success' => true, 'first_time' => false, 'device_mismatch' => true]);
+    // اسمح بالدخول — الموظف لا يشعر بشيء
+    echo json_encode(['success' => true, 'first_time' => false]);
+    exit;
+}
+
+// ── وضع حر (device_bind_mode=0) مع وجود بصمة قديمة ──
+logTampering($employee['id'], 'different_device', 'تسجيل من جهاز مختلف عن الجهاز المربوط', 'medium', $details);
+echo json_encode(['success' => true, 'first_time' => false, 'device_mismatch' => true]);
+
+// ================================================================
+// Helper: تسجيل حالة تلاعب
+// ================================================================
+function logTampering($empId, $type, $desc, $severity, $details)
+{
+    try {
+        $stmt = db()->prepare("INSERT INTO tampering_cases (employee_id, case_type, description, attendance_date, severity, details_json) VALUES (?, ?, ?, CURDATE(), ?, ?)");
+        $stmt->execute([$empId, $type, $desc, $severity, json_encode($details, JSON_UNESCAPED_UNICODE)]);
+    } catch (Exception $e) { /* الجدول قد لا يكون موجوداً */
+    }
 }

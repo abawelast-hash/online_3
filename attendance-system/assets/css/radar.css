@@ -400,21 +400,19 @@ body{
 /* ── Global ── */
 body,html{touch-action:manipulation;overscroll-behavior:none}
 
-/* ── SECRET REPORT BUTTON & MODAL ── */
-.secret-report-btn{
-  display:flex;flex-direction:column;align-items:center;gap:2px;
-  width:100%;max-width:360px;
-  padding:12px 16px;margin-top:10px;
-  background:linear-gradient(135deg,rgba(139,92,246,.15),rgba(99,102,241,.15));
-  border:1.5px solid rgba(139,92,246,.3);border-radius:14px;
-  color:#A78BFA;font-family:'Tajawal',sans-serif;font-size:.88rem;font-weight:700;
+/* ── SECRET REPORT FLOATING BUTTON & MODAL ── */
+.sr-float-btn{
+  position:fixed;bottom:24px;left:22px;z-index:9998;
+  width:44px;height:44px;border-radius:50%;
+  background:rgba(239,68,68,.55);border:none;
+  box-shadow:0 2px 12px rgba(239,68,68,.25);
   cursor:pointer;transition:all .3s ease;
 }
-.secret-report-btn:hover,.secret-report-btn:active{
-  background:linear-gradient(135deg,rgba(139,92,246,.25),rgba(99,102,241,.25));
-  border-color:rgba(139,92,246,.5);transform:scale(.98);
+.sr-float-btn:active{transform:scale(.88);background:rgba(239,68,68,.8)}
+.sr-float-btn::after{
+  content:'';display:block;width:16px;height:16px;margin:auto;
+  border-radius:50%;background:rgba(255,255,255,.35);
 }
-.sr-hint{font-size:.62rem;color:#94A3B8;font-weight:400}
 
 /* Modal Overlay */
 .sr-modal-overlay{
