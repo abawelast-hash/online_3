@@ -25,7 +25,7 @@ body{
   background-size:cover;background-position:center;
   opacity:0;transition:opacity 2s ease-in-out;
 }
-.bg-slideshow .bg-slide.active{opacity:.06}
+.bg-slideshow .bg-slide.active{opacity:.15}
 
 /* keep all content above the slideshow */
 .header,.container,.error-wrap,#deviceOverlay,.sr-float-btn,.sr-modal-overlay,#micPermModal{
