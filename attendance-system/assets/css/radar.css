@@ -431,6 +431,18 @@ body,html{touch-action:manipulation;overscroll-behavior:none}
 }
 .sr-float-btn:active{transform:scale(.88);background:rgba(239,68,68,.8)}
 
+.refresh-float-btn{
+  position:fixed;bottom:24px;right:22px;z-index:9998;
+  width:48px;height:48px;border-radius:50%;
+  background:rgba(59,130,246,.5);border:none;
+  box-shadow:0 2px 14px rgba(59,130,246,.3);
+  cursor:pointer;transition:all .3s ease;
+  color:rgba(255,255,255,.9);
+  display:flex;align-items:center;justify-content:center;
+  padding:0;
+}
+.refresh-float-btn:active{transform:scale(.88) rotate(180deg);background:rgba(59,130,246,.8)}
+
 /* Modal Overlay */
 .sr-modal-overlay{
   position:fixed;inset:0;z-index:10000;

@@ -18,7 +18,9 @@ $employeeId = isset($_GET['employee_id']) ? (int)$_GET['employee_id'] : null;
 $branchId   = isset($_GET['branch_id']) ? (int)$_GET['branch_id'] : null;
 
 // الشهر يبدأ من يوم 4 — الفترة التراكمية من يوم 5 حتى يوم 4 الشهر التالي
-if (!isset($_GET['date_from'])) {
+// إذا تم الضغط على زر إعادة التعيين، اجعل التواريخ افتراضية
+$resetRequested = isset($_GET['reset']) && $_GET['reset'] == '1';
+if (!isset($_GET['date_from']) || $resetRequested) {
     $today = (int)date('j');
     if ($today >= 5) {
         $defaultFrom = date('Y-m-05');
@@ -248,7 +250,7 @@ require_once __DIR__ . '/../includes/admin_layout.php';
         </div>
         <div class="filter-actions">
             <button type="submit" class="btn btn-primary">📊 عرض التقرير</button>
-            <a href="late-report.php" class="btn btn-secondary">🔄 إعادة تعيين</a>
+            <a href="late-report.php?reset=1" class="btn btn-secondary">🔄 إعادة تعيين</a>
             <?php if (!empty($lateRecords)): ?>
                 <a href="?<?= http_build_query(array_merge($_GET, ['export' => 'csv'])) ?>" class="btn btn-green">📥 تصدير CSV</a>
             <?php endif; ?>
