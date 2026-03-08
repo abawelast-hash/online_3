@@ -16,7 +16,19 @@ $activePage = 'late-report';
 $filterType = $_GET['filter_type'] ?? 'all';
 $employeeId = isset($_GET['employee_id']) ? (int)$_GET['employee_id'] : null;
 $branchId   = isset($_GET['branch_id']) ? (int)$_GET['branch_id'] : null;
-$dateFrom   = $_GET['date_from'] ?? date('Y-m-01');
+
+// الشهر يبدأ من يوم 4 — الفترة التراكمية من يوم 5 حتى يوم 4 الشهر التالي
+if (!isset($_GET['date_from'])) {
+    $today = (int)date('j');
+    if ($today >= 5) {
+        $defaultFrom = date('Y-m-05');
+    } else {
+        $defaultFrom = date('Y-m-05', strtotime('first day of last month'));
+    }
+} else {
+    $defaultFrom = null;
+}
+$dateFrom   = $_GET['date_from'] ?? $defaultFrom;
 $dateTo     = $_GET['date_to']   ?? date('Y-m-d');
 
 // جلب قوائم الموظفين والفروع للفلتر

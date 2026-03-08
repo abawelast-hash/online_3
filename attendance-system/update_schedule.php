@@ -2,15 +2,16 @@
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/db.php';
 
-// Update ALL branches to the evening schedule
+// Update ALL branches: work 20:00–00:00, geofence 4m
 $stmt = db()->prepare("UPDATE branches SET 
     work_start_time = '20:00:00',
-    work_end_time = '23:59:00',
-    check_in_start_time = '19:00:00',
-    check_in_end_time = '21:00:00',
-    check_out_start_time = '23:30:00',
-    check_out_end_time = '00:30:00',
-    checkout_show_before = 30
+    work_end_time = '00:00:00',
+    check_in_start_time = '19:30:00',
+    check_in_end_time = '21:30:00',
+    check_out_start_time = '23:00:00',
+    check_out_end_time = '01:00:00',
+    checkout_show_before = 30,
+    geofence_radius = 4
 ");
 $stmt->execute();
 
@@ -20,11 +21,11 @@ echo "Updated $affected branches\n";
 // Also update default settings
 $defaults = [
     'work_start_time' => '20:00',
-    'work_end_time' => '23:59',
-    'check_in_start_time' => '19:00',
-    'check_in_end_time' => '21:00',
-    'check_out_start_time' => '23:30',
-    'check_out_end_time' => '00:30',
+    'work_end_time' => '00:00',
+    'check_in_start_time' => '19:30',
+    'check_in_end_time' => '21:30',
+    'check_out_start_time' => '23:00',
+    'check_out_end_time' => '01:00',
     'checkout_show_before' => '30'
 ];
 
