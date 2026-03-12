@@ -303,8 +303,10 @@ L.Icon.Default.mergeOptions({
         max-width: 700px;
         max-height: 90vh;
         overflow-y: auto;
+        overflow-x: hidden;
         box-shadow: 0 25px 50px rgba(0, 0, 0, .25);
         padding: 0;
+        isolation: isolate;
     }
 
     .modal-branch-head {
@@ -392,6 +394,13 @@ L.Icon.Default.mergeOptions({
         overflow: hidden;
         position: relative;
         z-index: 0;
+        contain: layout paint;
+        isolation: isolate;
+    }
+
+    #branchMapAdd .leaflet-container,
+    #branchMapEdit .leaflet-container {
+        border-radius: 8px;
     }
 </style>
 
