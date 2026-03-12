@@ -732,8 +732,8 @@ L.Icon.Default.mergeOptions({
         setTimeout(() => {
             if (addMap) { addMap.remove(); addMap = null; addMarker = null; }
             addMap = L.map('branchMapAdd').setView([24.7136, 46.6753], 13);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors',
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+                attribution: '© Esri & contributors',
                 maxZoom: 19
             }).addTo(addMap);
             addMap.on('click', function(e) {
@@ -773,8 +773,8 @@ L.Icon.Default.mergeOptions({
             const lon = parseFloat(b.longitude) || 46.6753;
             if (editMap) { editMap.remove(); editMap = null; editMarker = null; }
             editMap = L.map('branchMapEdit').setView([lat, lon], 16);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors',
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+                attribution: '© Esri & contributors',
                 maxZoom: 19
             }).addTo(editMap);
             editMap.on('click', function(e) {
