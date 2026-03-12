@@ -380,6 +380,9 @@ require_once __DIR__ . '/../includes/admin_layout.php';
         border-radius: 10px;
         margin-bottom: 10px;
         border: 2px solid var(--border);
+        overflow: hidden;
+        position: relative;
+        z-index: 0;
     }
 </style>
 
