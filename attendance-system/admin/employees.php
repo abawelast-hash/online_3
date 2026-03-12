@@ -268,7 +268,7 @@ require_once __DIR__ . '/../includes/admin_layout.php';
         <div class="top-actions" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
             <button class="btn btn-primary" onclick="openModal('addModal')">+ إضافة موظف</button>
             <div class="dropdown-wrap" style="position:relative">
-                <button class="btn btn-secondary" onclick="this.nextElementSibling.classList.toggle('show')" type="button">
+                <button class="btn btn-secondary" onclick="toggleBulkMenu(this)" type="button">
                     ⚙️ إجراءات جماعية ▾
                 </button>
                 <div class="dropdown-menu">
@@ -774,9 +774,34 @@ require_once __DIR__ . '/../includes/admin_layout.php';
     function toggleEmpMenu(btn) {
         const menu = btn.nextElementSibling;
         const wasOpen = menu.classList.contains('show');
-        document.querySelectorAll('.emp-actions-menu.show').forEach(m => m.classList.remove('show'));
-        if (!wasOpen) menu.classList.add('show');
+        // أغلق جميع القوائم أولاً
+        closeAllMenus();
+        if (!wasOpen) {
+            menu.classList.add('show');
+            const ov = document.getElementById('dropdownOverlay');
+            if (ov && window.innerWidth <= 768) ov.classList.add('show');
+        }
     }
+    function closeAllMenus() {
+        document.querySelectorAll('.dropdown-menu.show').forEach(m => m.classList.remove('show'));
+        const ov = document.getElementById('dropdownOverlay');
+        if (ov) ov.classList.remove('show');
+    }
+    document.getElementById('dropdownOverlay')?.addEventListener('click', closeAllMenus);
+    function toggleBulkMenu(btn) {
+        const menu = btn.nextElementSibling;
+        const wasOpen = menu.classList.contains('show');
+        closeAllMenus();
+        if (!wasOpen) {
+            menu.classList.add('show');
+            const ov = document.getElementById('dropdownOverlay');
+            if (ov && window.innerWidth <= 768) ov.classList.add('show');
+        }
+    }
+    // إغلاق القوائم عند النقر خارجها (desktop)
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.dropdown-wrap')) closeAllMenus();
+    });
 
     function tick() {
         const el = document.getElementById('topbarClock');

@@ -120,4 +120,7 @@
                 <span>الإعدادات</span>
             </a>
         </nav>
+    <!-- Dropdown Overlay (mobile bottom-sheet) -->
+    <div class="dropdown-overlay" id="dropdownOverlay"></div>
+
         <div class="content fade-in">

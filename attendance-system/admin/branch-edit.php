@@ -199,6 +199,23 @@ L.Icon.Default.mergeOptions({
         .form-row.col3 {
             grid-template-columns: 1fr;
         }
+        #branchMapEditPage {
+            height: 250px;
+        }
+        .branch-edit-body {
+            padding: 12px;
+        }
+        .branch-edit-head {
+            padding: 12px 14px;
+            font-size: .95rem;
+        }
+        .branch-edit-foot {
+            flex-direction: column;
+        }
+        .branch-edit-foot .btn {
+            width: 100%;
+            justify-content: center;
+        }
     }
 </style>
 
