@@ -50,38 +50,27 @@ if (!$employee) {
     jsonResponse(['success' => false, 'message' => 'رمز غير صالح أو الموظف غير مفعّل'], 403);
 }
 
-// H2: التحقق من أن التسجيل ضمن نافذة وقت الدوام المسموحة (حسب الفرع)
+// H2: التحقق من أن التسجيل ضمن وقت الدوام (قبل بدء الدوام بساعة ونصف حتى نهاية الدوام)
 $schedule       = getBranchSchedule($employee['branch_id'] ?? null);
-$ciStart        = $schedule['check_in_start_time'];
-$ciEnd          = $schedule['check_in_end_time'];
+$workStart      = $schedule['work_start_time'];
+$workEnd        = $schedule['work_end_time'];
 $nowTime        = date('H:i');
 
-// التحقق من النافذة الأصلية
-if ($ciEnd < $ciStart) {
-    $inPrimaryWindow = !($nowTime < $ciStart && $nowTime > $ciEnd);
+// بداية النافذة = work_start - 90 دقيقة
+$earlyStart = date('H:i', strtotime($workStart) - 5400);
+
+// التحقق: من earlyStart إلى workEnd
+if ($workEnd < $earlyStart) {
+    // يعبر منتصف الليل
+    $outsideWindow = ($nowTime < $earlyStart && $nowTime > $workEnd);
 } else {
-    $inPrimaryWindow = !($nowTime < $ciStart || $nowTime > $ciEnd);
+    $outsideWindow = ($nowTime < $earlyStart || $nowTime > $workEnd);
 }
 
-// نافذة ثانية للعودة من الاستراحة (break_end -30 دقيقة إلى break_end +60 دقيقة)
-$inBreakWindow = false;
-$breakMsg = '';
-if (!empty($schedule['break_start']) && !empty($schedule['break_end'])) {
-    $beTime   = strtotime($schedule['break_end']);
-    $bwStart  = date('H:i', $beTime - 1800); // 30 دقيقة قبل
-    $bwEnd    = date('H:i', $beTime + 3600); // 60 دقيقة بعد
-    if ($bwEnd < $bwStart) {
-        $inBreakWindow = !($nowTime < $bwStart && $nowTime > $bwEnd);
-    } else {
-        $inBreakWindow = !($nowTime < $bwStart || $nowTime > $bwEnd);
-    }
-    $breakMsg = " أو {$bwStart} - {$bwEnd} (بعد الاستراحة)";
-}
-
-if (!$inPrimaryWindow && !$inBreakWindow) {
+if ($outsideWindow) {
     jsonResponse([
         'success' => false,
-        'message' => "وقت تسجيل الدخول المسموح به: {$ciStart} - {$ciEnd}{$breakMsg}. الوقت الحالي: {$nowTime}"
+        'message' => "تسجيل الحضور متاح من {$earlyStart} إلى {$workEnd}. الوقت الحالي: {$nowTime}"
     ], 200);
 }
 

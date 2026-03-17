@@ -27,10 +27,7 @@ $branchId       = ($employee && !empty($employee['branch_id'])) ? (int)$employee
 $schedule       = getBranchSchedule($branchId);
 $workStart      = $schedule['work_start_time'];
 $workEnd        = $schedule['work_end_time'];
-$coStart        = $schedule['check_out_start_time'];
 $allowOvertime  = $schedule['allow_overtime'];
-$ciStart        = $schedule['check_in_start_time'];
-$ciEnd          = $schedule['check_in_end_time'];
 
 $workLat        = (float) getSystemSetting('work_latitude',  '24.572307');
 $workLon        = (float) getSystemSetting('work_longitude', '46.602552');
@@ -78,11 +75,9 @@ $jsConfig = json_encode([
   'workLat'        => $workLat,
   'workLon'        => $workLon,
   'geofenceRadius' => $geofenceRadius,
-  'coStart'        => $coStart,
+  'workEnd'        => $workEnd,
   'showCheckout'   => $showCheckoutButton,
   'allowOvertime'  => $allowOvertime,
-  'ciStart'        => $ciStart,
-  'ciEnd'          => $ciEnd,
   'branchName'     => $branchName,
 ], JSON_UNESCAPED_UNICODE);
 
@@ -391,7 +386,7 @@ $badgeClass = $todayStatus === 'checked_in' ? 'in' : ($todayStatus === 'checked_
         todayStatus: '<?= $todayStatus ?>',
         checkInTime: '<?= $checkInTime ? date("Y-m-d\\TH:i:s", strtotime($checkInTime)) : "" ?>',
         showCheckout: <?= $showCheckoutButton ? 'true' : 'false' ?>,
-        coStart: '<?= $coStart ?>'
+        workEnd: '<?= $workEnd ?>'
       };
       window.RADAR_URLS = {
         verifyDevice: '<?= SITE_URL ?>/api/verify-device.php',

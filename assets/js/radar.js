@@ -246,11 +246,11 @@ if (STATE.todayStatus === 'checked_in' && STATE.checkInTime) {
 }
 
 // ================================================================
-// AUTO CHECKOUT — at check_out_start_time
+// AUTO CHECKOUT — at work_end time
 // ================================================================
 var autoCheckOutDone = false;
-if (STATE.todayStatus === 'checked_in' && STATE.coStart) {
-  var _coP = STATE.coStart.split(':');
+if (STATE.todayStatus === 'checked_in' && STATE.workEnd) {
+  var _coP = STATE.workEnd.split(':');
   (function tick(){
     if (autoCheckOutDone) return;
     var now = new Date(), tgt = new Date();

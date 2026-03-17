@@ -58,23 +58,7 @@ if (!$stmt->fetch()) {
     jsonResponse(['success' => false, 'message' => 'لم يتم تسجيل الدخول اليوم. سجّل دخولاً أولاً.']);
 }
 
-// التحقق من نافذة وقت الانصراف (حسب الفرع)
-$schedule = getBranchSchedule($employee['branch_id'] ?? null);
-$coStart  = $schedule['check_out_start_time'];
-$coEnd    = $schedule['check_out_end_time'];
-$nowTime  = date('H:i');
-// Handle midnight crossing (e.g. coStart=23:30, coEnd=00:00)
-if ($coEnd < $coStart) {
-    $outsideWindow = ($nowTime < $coStart && $nowTime > $coEnd);
-} else {
-    $outsideWindow = ($nowTime < $coStart || $nowTime > $coEnd);
-}
-if ($outsideWindow) {
-    jsonResponse([
-        'success' => false,
-        'message' => "وقت الانصراف المسموح: {$coStart} - {$coEnd}. الوقت الحالي: {$nowTime}"
-    ], 200);
-}
+// الانصراف متاح في أي وقت بعد تسجيل الحضور
 
 // التحقق من النطاق الجغرافي (باستخدام فرع الموظف إن وجد)
 $geoCheck = isWithinGeofence($lat, $lon, $employee['branch_id'] ?? null);
