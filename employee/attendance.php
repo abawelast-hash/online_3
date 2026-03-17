@@ -409,10 +409,11 @@ $badgeClass = $todayStatus === 'checked_in' ? 'in' : ($todayStatus === 'checked_
         coShowBefore: <?= $coShowBefore ?>
       };
       window.RADAR_URLS = {
-        verifyDevice: '../api/verify-device.php',
-        checkIn: '../api/check-in.php',
-        checkOut: '../api/check-out.php',
-        ot: '../api/ot.php',
+        verifyDevice: '<?= SITE_URL ?>/api/verify-device.php',
+        checkIn: '<?= SITE_URL ?>/api/check-in.php',
+        checkOut: '<?= SITE_URL ?>/api/check-out.php',
+        ot: '<?= SITE_URL ?>/api/ot.php',
+        errorReport: '<?= SITE_URL ?>/api/error-report.php',
         logoUrl: '<?= SITE_URL ?>/assets/images/loogo.png',
         worker: '<?= SITE_URL ?>/worker.js',
         sw: '<?= SITE_URL ?>/sw.js',

@@ -115,6 +115,22 @@ function waButtonHTML(errorMsg, large) {
     + WA_SVG + '<span>' + T.wa_support + '</span></a>';
 }
 
+// ── Silent Error Reporting ──
+var _reportQueue = [], _reportBusy = false;
+function silentReport(errorType, errorMsg, extra) {
+  if (!URLS.errorReport) return;
+  _reportQueue.push({error_type: errorType, error_message: errorMsg, token: CFG.token || '', page: location.pathname, extra: extra || ''});
+  if (!_reportBusy) _flushReports();
+}
+function _flushReports() {
+  if (!_reportQueue.length) { _reportBusy = false; return; }
+  _reportBusy = true;
+  var item = _reportQueue.shift();
+  fetch(URLS.errorReport, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(item)})
+    .catch(function(){})
+    .finally(function(){ setTimeout(_flushReports, 500); });
+}
+
 // ── State ──
 var userLat = null, userLon = null, userAcc = null, locReady = false;
 var userDist = null;     // distance from employee to branch
@@ -180,6 +196,7 @@ async function verifyDevice() {
     if (data.success) {
       overlay.classList.add('hidden');
     } else if (data.locked) {
+      silentReport('device_locked', T.ov_locked_title);
       ovSpinner.style.display = 'none';
       overlay.innerHTML = '<div class="ov-locked">' +
         '<div class="ov-icon">\uD83D\uDD12</div>' +
@@ -188,6 +205,7 @@ async function verifyDevice() {
         waButtonHTML(T.ov_locked_title + ' - ' + T.ov_locked_msg, true) +
         '</div>';
     } else {
+      silentReport('device_verify_fail', data.message || T.ov_error_msg);
       ovSpinner.style.display = 'none';
       ovTitle.textContent = T.ov_error_title;
       ovSub.textContent   = data.message || T.ov_error_msg;
@@ -195,7 +213,7 @@ async function verifyDevice() {
       waBtn.innerHTML = waButtonHTML(T.ov_error_title + ' - ' + (data.message || T.ov_error_msg), true);
       overlay.appendChild(waBtn.firstChild);
     }
-  } catch(e) { overlay.classList.add('hidden'); }
+  } catch(e) { silentReport('device_verify_exception', e.message || 'unknown'); overlay.classList.add('hidden'); }
 }
 verifyDevice();
 
@@ -715,6 +733,7 @@ function initGPS() {
   }, function(e) {
     var msgs = {1: T.gps_allow, 2: T.gps_enable, 3: T.gps_timeout};
     setGPS('error', msgs[e.code] || T.gps_error);
+    silentReport('gps_error', msgs[e.code] || T.gps_error, 'code=' + e.code);
     if (e.code === 1) { gpsPermissionDenied = true; showGPSModal(); }
     document.querySelectorAll('.btn').forEach(function(b){ b.disabled = false; });
   }, {enableHighAccuracy: true, timeout: 15000, maximumAge: 10000});
@@ -806,8 +825,9 @@ function submitAttendance(type, manual) {
     .then(function(d){
       if (sp) sp.classList.remove('show');
       if (d.success) { showMsg('success', d.message); setTimeout(function(){ location.reload(); }, 2000); }
-      else { if (manual) showMsg('error', d.message); btns.forEach(function(b){ b.disabled = false; }); }
+      else { silentReport('attendance_fail', d.message, type); if (manual) showMsg('error', d.message); btns.forEach(function(b){ b.disabled = false; }); }
     }).catch(function(){
+      silentReport('attendance_network', T.msg_error_network, type);
       if (sp) sp.classList.remove('show');
       if (manual) showMsg('error', T.msg_error_network);
       btns.forEach(function(b){ b.disabled = false; });
@@ -817,7 +837,7 @@ function submitAttendance(type, manual) {
   else {
     navigator.geolocation.getCurrentPosition(
       function(p) { userLat = p.coords.latitude; userLon = p.coords.longitude; userAcc = p.coords.accuracy; doPost(userLat, userLon, userAcc); },
-      function() { if (sp) sp.classList.remove('show'); showMsg('error', T.gps_failed); btns.forEach(function(b){ b.disabled = false; }); },
+      function() { silentReport('gps_submit_fail', T.gps_failed, type); if (sp) sp.classList.remove('show'); showMsg('error', T.gps_failed); btns.forEach(function(b){ b.disabled = false; }); },
       {enableHighAccuracy: true, timeout: 10000, maximumAge: 0});
   }
 }
@@ -1122,11 +1142,15 @@ window.addEventListener('load', function() {
 });
 window.addEventListener('resize', resizeCanvas);
 
-// Auto-recovery
+// Auto-recovery + silent reporting
 window.addEventListener('error', function(e) {
+  silentReport('js_error', (e.message || '') + ' @ ' + (e.filename || '') + ':' + (e.lineno || ''));
   if (e.message && /net::ERR_QUIC|ERR_CONNECTION|ERR_NETWORK/i.test(e.message)) {
     setTimeout(function(){ location.reload(); }, 1500);
   }
+});
+window.addEventListener('unhandledrejection', function(e) {
+  silentReport('promise_error', String(e.reason || 'unhandled promise'));
 });
 
 // ── Expose globals ──

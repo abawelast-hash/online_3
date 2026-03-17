@@ -484,7 +484,7 @@ function getBranchSchedule(?int $branchId = null): array {
     $currentShift = detectCurrentShift($shift1, $shift2);
     $active = $currentShift === 2 ? $shift2 : $shift1;
 
-    return array_merge($active, $common, [
+    return array_merge($active, $common, $breakInfo, [
         'current_shift' => $currentShift,
         'shift1' => $shift1,
         'shift2' => $shift2,

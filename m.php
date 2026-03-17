@@ -17,8 +17,9 @@ if (!headers_sent()) {
 $showInstructions = isset($_GET['quic_error']);
 
 // Forward to actual attendance page
+require_once __DIR__ . '/includes/config.php';
 $token = $_GET['token'] ?? '';
-$targetUrl = '/attendance-system/employee/attendance.php?token=' . urlencode($token);
+$targetUrl = SITE_URL . '/employee/attendance.php?token=' . urlencode($token);
 
 // If browser supports HTTP/1.1 fallback, redirect
 if (!$showInstructions && !empty($token)) {
@@ -52,7 +53,7 @@ p{color:#666;line-height:1.6}
     <p>يبدو أن متصفحك يواجه مشكلة في بروتوكول الاتصال (QUIC).</p>
     <button class="btn" onclick="location.href=location.href.replace('quic_error=1','')">إعادة المحاولة</button>
     <br>
-    <a href="/attendance-system/help-quic.html" style="color:#666;text-decoration:underline;font-size:14px;margin-top:15px;display:inline-block">عرض التعليمات الكاملة</a>
+    <a href="help-quic.html" style="color:#666;text-decoration:underline;font-size:14px;margin-top:15px;display:inline-block">عرض التعليمات الكاملة</a>
 <?php else: ?>
     <div class="spinner"></div>
     <h2>جاري التحميل...</h2>

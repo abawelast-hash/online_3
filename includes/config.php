@@ -81,7 +81,7 @@ if (!headers_sent()) {
     header('X-Frame-Options: SAMEORIGIN');
     header('X-XSS-Protection: 1; mode=block');
     header('Referrer-Policy: strict-origin-when-cross-origin');
-    header('Permissions-Policy: geolocation=(self), camera=(), microphone=()');
+    header('Permissions-Policy: geolocation=(self), camera=(), microphone=(self)');
 }
 
 // ================== v4.0 Bootstrap (MVC + Services) ==================
