@@ -28,6 +28,101 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id'])) {
     exit;
 }
 
+// =================== حفظ/تحديث سجل ===================
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'save_attendance') {
+    header('Content-Type: application/json');
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+        echo json_encode(['success' => false, 'message' => 'طلب غير صالح']);
+        exit;
+    }
+    
+    $id = !empty($_POST['id']) ? (int)$_POST['id'] : 0;
+    $empId = (int)($_POST['employee_id'] ?? 0);
+    $type = $_POST['type'] ?? 'in';
+    $dateTime = $_POST['datetime'] ?? date('Y-m-d H:i');
+    $lateMinutes = (int)($_POST['late_minutes'] ?? 0);
+    $notes = trim($_POST['notes'] ?? '');
+    
+    // التحقق من البيانات
+    if ($empId <= 0 || !in_array($type, ['in', 'out'])) {
+        echo json_encode(['success' => false, 'message' => 'بيانات غير صحيحة']);
+        exit;
+    }
+    
+    // التحقق من صحة التاريخ والوقت
+    if (!preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/', $dateTime)) {
+        echo json_encode(['success' => false, 'message' => 'صيغة التاريخ/الوقت غير صحيحة']);
+        exit;
+    }
+    
+    try {
+        $attendanceDate = substr($dateTime, 0, 10);
+        
+        if ($id > 0) {
+            // تحديث سجل موجود
+            $stmt = db()->prepare("
+                UPDATE attendances 
+                SET timestamp = ?, attendance_date = ?, late_minutes = ?, notes = ?
+                WHERE id = ?
+            ");
+            $stmt->execute([$dateTime, $attendanceDate, $lateMinutes, $notes, $id]);
+            auditLog('edit_attendance', "تحديث سجل حضور ID={$id} — نوع={$type}, وقت={$dateTime}", $id);
+            echo json_encode(['success' => true, 'message' => 'تم التحديث بنجاح', 'id' => $id]);
+        } else {
+            // إدراج سجل جديد
+            $stmt = db()->prepare("
+                INSERT INTO attendances (employee_id, type, timestamp, attendance_date, late_minutes, latitude, longitude, notes)
+                VALUES (?, ?, ?, ?, ?, 0, 0, ?)
+            ");
+            $stmt->execute([$empId, $type, $dateTime, $attendanceDate, $lateMinutes, $notes]);
+            $newId = (int)db()->lastInsertId();
+            auditLog('add_attendance', "إضافة سجل حضور جديد — موظف={$empId}, نوع={$type}, وقت={$dateTime}", $newId);
+            echo json_encode(['success' => true, 'message' => 'تم الإضافة بنجاح', 'id' => $newId]);
+        }
+    } catch (Exception $e) {
+        echo json_encode(['success' => false, 'message' => 'خطأ في قاعدة البيانات: ' . $e->getMessage()]);
+    }
+    exit;
+}
+
+// =================== جلب بيانات السجل للتحرير ===================
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'get_attendance') {
+    header('Content-Type: application/json');
+    $id = (int)($_GET['id'] ?? 0);
+    
+    if ($id <= 0) {
+        echo json_encode(['success' => false, 'message' => 'معرف غير صالح']);
+        exit;
+    }
+    
+    $stmt = db()->prepare("
+        SELECT id, employee_id, type, timestamp, late_minutes, notes
+        FROM attendances
+        WHERE id = ?
+    ");
+    $stmt->execute([$id]);
+    $record = $stmt->fetch();
+    
+    if (!$record) {
+        echo json_encode(['success' => false, 'message' => 'السجل غير موجود']);
+        exit;
+    }
+    
+    // تحويل timestamp إلى صيغة HTML datetime input
+    $dateTime = date('Y-m-d H:i', strtotime($record['timestamp']));
+    
+    echo json_encode([
+        'success' => true,
+        'id' => $record['id'],
+        'employee_id' => $record['employee_id'],
+        'type' => $record['type'],
+        'datetime' => $dateTime,
+        'late_minutes' => $record['late_minutes'],
+        'notes' => $record['notes']
+    ]);
+    exit;
+}
+
 $pageTitle  = 'تقارير الحضور';
 $activePage = 'attendance';
 
@@ -193,6 +288,9 @@ require_once __DIR__ . '/../includes/admin_layout.php';
            class="btn btn-primary" style="background:#7c3aed;border-color:#7c3aed">
            🖨️ تقرير يومي
         </a>
+        <button type="button" class="btn btn-success" onclick="openAddAttendanceModal()" style="margin-right:auto">
+           ➕ إضافة حضور
+        </button>
     </form>
 </div>
 
@@ -219,7 +317,7 @@ require_once __DIR__ . '/../includes/admin_layout.php';
     <div style="overflow-x:auto">
     <table class="att-table">
         <thead>
-            <tr><th>#</th><th>الموظف</th><th>الفرع</th><th>النوع</th><th>التاريخ</th><th>الوقت</th><th>الموقع</th><th>الدقة</th><th>حذف</th></tr>
+            <tr><th>#</th><th>الموظف</th><th>الفرع</th><th>النوع</th><th>التاريخ</th><th>الوقت</th><th>الموقع</th><th>الدقة</th><th>الإجراءات</th></tr>
         </thead>
         <tbody id="attendanceTableBody">
         <?php if (empty($records)): ?>
@@ -235,7 +333,10 @@ require_once __DIR__ . '/../includes/admin_layout.php';
                 <td style="color:var(--primary);font-weight:bold"><?= date('h:i:s A', strtotime($rec['timestamp'])) ?></td>
                 <td><a href="https://maps.google.com/?q=<?= $rec['latitude'] ?>,<?= $rec['longitude'] ?>" target="_blank" class="btn btn-secondary btn-sm" title="عرض على الخريطة">الخريطة</a></td>
                 <td style="color:var(--text3);font-size:.8rem"><?= round($rec['location_accuracy'] ?? 0) ?> م</td>
-                <td><button class="btn btn-danger btn-sm" onclick="deleteRecord(<?= $rec['id'] ?>, this)" title="حذف السجل">🗑️</button></td>
+                <td style="display:flex;gap:5px">
+                    <button class="btn btn-info btn-sm" onclick="editAttendanceRecord(<?= $rec['id'] ?>)" title="تعديل السجل">✎ تعديل</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteRecord(<?= $rec['id'] ?>, this)" title="حذف السجل">🗑️</button>
+                </td>
             </tr>
             <?php endforeach; ?>
         <?php endif; ?>
@@ -262,6 +363,61 @@ require_once __DIR__ . '/../includes/admin_layout.php';
         <?php endfor; ?>
         </div>
     <?php endif; ?>
+    </div>
+</div>
+
+<!-- modal إضافة / تعديل الحضور -->
+<div id="attendanceModal" class="modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:1000;justify-content:center;align-items:center">
+    <div style="background:white;border-radius:8px;padding:30px;max-width:500px;width:90%;box-shadow:0 10px 40px rgba(0,0,0,0.2)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+            <h2 id="modalTitle" style="margin:0">إضافة حضور جديد</h2>
+            <button onclick="closeAttendanceModal()" style="background:none;border:none;font-size:24px;cursor:pointer">×</button>
+        </div>
+        
+        <form id="attendanceForm" style="display:flex;flex-direction:column;gap:15px">
+            <input type="hidden" id="recordId" value="0">
+            
+            <div>
+                <label for="empSelect" style="display:block;margin-bottom:5px;font-weight:bold;color:#333">الموظف <span style="color:red">*</span></label>
+                <select id="empSelect" required style="width:100%;padding:10px;border:1px solid #ddd;border-radius:4px;font-size:14px">
+                    <option value="">-- اختر موظف --</option>
+                    <?php foreach($empList as $emp): ?>
+                    <option value="<?= $emp->id ?>"><?= htmlspecialchars($emp->full_name) ?> (<?= $emp->emp_code ?>)</option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            
+            <div>
+                <label for="typeSelect" style="display:block;margin-bottom:5px;font-weight:bold;color:#333">نوع الحضور <span style="color:red">*</span></label>
+                <select id="typeSelect" required style="width:100%;padding:10px;border:1px solid #ddd;border-radius:4px;font-size:14px">
+                    <option value="">-- اختر --</option>
+                    <option value="in">دخول (في)</option>
+                    <option value="out">خروج (آوت)</option>
+                </select>
+            </div>
+            
+            <div>
+                <label for="datetimeInput" style="display:block;margin-bottom:5px;font-weight:bold;color:#333">التاريخ والوقت <span style="color:red">*</span></label>
+                <input type="datetime-local" id="datetimeInput" required style="width:100%;padding:10px;border:1px solid #ddd;border-radius:4px;font-size:14px">
+            </div>
+            
+            <div>
+                <label for="lateInput" style="display:block;margin-bottom:5px;font-weight:bold;color:#333">دقائق التأخير</label>
+                <input type="number" id="lateInput" min="0" value="0" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:4px;font-size:14px">
+            </div>
+            
+            <div>
+                <label for="notesInput" style="display:block;margin-bottom:5px;font-weight:bold;color:#333">ملاحظات</label>
+                <textarea id="notesInput" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:4px;font-size:14px;resize:vertical;min-height:80px"></textarea>
+            </div>
+            
+            <div id="formError" style="padding:12px;border-radius:4px;color:#d32f2f;background:#ffebee;display:none;border:1px solid #ffcdd2"></div>
+            
+            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:10px">
+                <button type="button" onclick="closeAttendanceModal()" class="btn" style="background:#e0e0e0;color:#333;border:none">إلغاء</button>
+                <button type="submit" class="btn btn-primary" id="submitBtn">حفظ</button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -442,6 +598,108 @@ document.addEventListener('visibilitychange', () => {
     } else {
         fetchAttendanceStats();
         refreshTimer = setInterval(fetchAttendanceStats, REFRESH_INTERVAL);
+    }
+});
+
+// =================== دوال الـ Modal ===================
+function openAddAttendanceModal() {
+    document.getElementById('recordId').value = '0';
+    document.getElementById('attendanceForm').reset();
+    document.getElementById('modalTitle').textContent = 'إضافة حضور جديد';
+    document.getElementById('formError').style.display = 'none';
+    document.getElementById('empSelect').disabled = false;
+    document.getElementById('attendanceModal').style.display = 'flex';
+}
+
+function closeAttendanceModal() {
+    document.getElementById('attendanceModal').style.display = 'none';
+    document.getElementById('attendanceForm').reset();
+}
+
+async function editAttendanceRecord(recordId) {
+    try {
+        const res = await fetch(`?action=get_attendance&id=${recordId}`);
+        if (!res.ok) throw new Error('فشل في تحميل السجل');
+        const data = await res.json();
+        
+        document.getElementById('recordId').value = data.id;
+        document.getElementById('empSelect').value = data.employee_id;
+        document.getElementById('typeSelect').value = data.type;
+        document.getElementById('datetimeInput').value = data.datetime;
+        document.getElementById('lateInput').value = data.late_minutes || '0';
+        document.getElementById('notesInput').value = data.notes || '';
+        
+        document.getElementById('modalTitle').textContent = 'تعديل الحضور';
+        document.getElementById('empSelect').disabled = true; // تعطيل تغيير الموظف عند التعديل
+        document.getElementById('formError').style.display = 'none';
+        document.getElementById('attendanceModal').style.display = 'flex';
+    } catch (e) {
+        alert('خطأ في تحميل السجل: ' + e.message);
+    }
+}
+
+document.getElementById('attendanceForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const recordId = document.getElementById('recordId').value;
+    const empId = document.getElementById('empSelect').value;
+    const type = document.getElementById('typeSelect').value;
+    const datetime = document.getElementById('datetimeInput').value;
+    const lateMinutes = parseInt(document.getElementById('lateInput').value) || 0;
+    const notes = document.getElementById('notesInput').value;
+    
+    const errorDiv = document.getElementById('formError');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    // التحقق من البيانات
+    if (!empId || !type || !datetime) {
+        errorDiv.textContent = 'يرجى ملء جميع الحقول المطلوبة';
+        errorDiv.style.display = 'block';
+        return;
+    }
+    
+    try {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'جاري الحفظ...';
+        
+        const formData = new FormData();
+        formData.append('action', 'save_attendance');
+        formData.append('id', recordId);
+        formData.append('employee_id', empId);
+        formData.append('type', type);
+        formData.append('datetime', datetime.replace('T', ' '));
+        formData.append('late_minutes', lateMinutes);
+        formData.append('notes', notes);
+        
+        const res = await fetch(window.location.href, {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!res.ok) throw new Error('فشل الطلب');
+        const data = await res.json();
+        
+        if (data.success) {
+            closeAttendanceModal();
+            // تحديث الجدول
+            fetchAttendanceStats();
+        } else {
+            errorDiv.textContent = data.message || 'خطأ غير معروف';
+            errorDiv.style.display = 'block';
+        }
+    } catch (e) {
+        errorDiv.textContent = 'خطأ: ' + e.message;
+        errorDiv.style.display = 'block';
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'حفظ';
+    }
+});
+
+// إغلاق الـ Modal عند الضغط خارجها
+document.getElementById('attendanceModal').addEventListener('click', (e) => {
+    if (e.target.id === 'attendanceModal') {
+        closeAttendanceModal();
     }
 });
 </script>
