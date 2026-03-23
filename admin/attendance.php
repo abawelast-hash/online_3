@@ -384,7 +384,7 @@ require_once __DIR__ . '/../includes/admin_layout.php';
                 <select id="empSelect" required style="width:100%;padding:10px;border:1px solid #ddd;border-radius:4px;font-size:14px">
                     <option value="">-- اختر موظف --</option>
                     <?php foreach($empList as $emp): ?>
-                    <option value="<?= $emp->id ?>"><?= htmlspecialchars($emp['name']) ?> — <?= htmlspecialchars($emp['job_title']) ?></option>
+                    <option value="<?= $emp['id'] ?>"><?= htmlspecialchars($emp['name']) ?> — <?= htmlspecialchars($emp['job_title']) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
@@ -684,8 +684,8 @@ document.getElementById('attendanceForm').addEventListener('submit', async (e) =
         
         if (data.success) {
             closeAttendanceModal();
-            // تحديث الجدول
-            fetchAttendanceStats();
+            // إعادة تحميل الصفحة لعرض التغييرات
+            location.reload();
         } else {
             errorDiv.textContent = data.message || 'خطأ غير معروف';
             errorDiv.style.display = 'block';
