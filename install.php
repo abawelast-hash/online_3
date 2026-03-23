@@ -36,6 +36,36 @@ $_dbName = $_ENV['DB_NAME'] ?? DB_NAME;
 // ===================== حماية: منع التشغيل المتكرر =====================
 $lockFile = __DIR__ . '/install.lock';
 
+// حماية إضافية: منع التشغيل إذا كانت جداول الموظفين موجودة ببيانات
+try {
+    $_checkPdo = new PDO(
+        "mysql:host=" . ($_ENV['DB_HOST'] ?? DB_HOST) . ";dbname=" . ($_ENV['DB_NAME'] ?? DB_NAME) . ";charset=utf8mb4",
+        $_ENV['DB_USER'] ?? DB_USER,
+        $_ENV['DB_PASS'] ?? DB_PASS,
+        [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+    );
+    $_empCount = (int)$_checkPdo->query("SELECT COUNT(*) FROM employees")->fetchColumn();
+    if ($_empCount > 0) {
+        // إنشاء ملف القفل تلقائياً لمنع أي تشغيل مستقبلي
+        file_put_contents($lockFile, date('Y-m-d H:i:s') . "\n");
+        die('<!DOCTYPE html><html lang="ar" dir="rtl">
+        <head><meta charset="UTF-8"><title>محمي</title>
+        <style>body{font-family:Arial;background:#0F172A;color:#E2E8F0;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
+        .box{background:#1E293B;border-radius:16px;padding:40px;max-width:500px;text-align:center}
+        h2{color:#D4A841;margin-bottom:12px} p{color:#94A3B8;margin-bottom:20px;line-height:1.7}
+        a{display:inline-block;padding:10px 22px;background:#059669;color:#fff;border-radius:8px;text-decoration:none;font-weight:bold;margin:4px}
+        </style></head>
+        <body><div class="box">
+        <h2>🔒 النظام مثبت ومحمي</h2>
+        <p>يوجد بيانات موظفين في قاعدة البيانات.<br>
+        لا يمكن إعادة التثبيت لحماية البيانات الموجودة.</p>
+        <a href="admin/dashboard.php">📊 لوحة التحكم</a>
+        </div></body></html>');
+    }
+} catch (Exception $_e) {
+    // قاعدة البيانات غير موجودة أو لا يمكن الاتصال - السماح بالتثبيت
+}
+
 if (file_exists($lockFile)) {
     die('<!DOCTYPE html><html lang="ar" dir="rtl">
     <head><meta charset="UTF-8"><title>تم التثبيت</title>
