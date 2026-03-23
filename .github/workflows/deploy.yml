@@ -1,0 +1,39 @@
+name: Deploy to Hostinger
+
+on:
+  push:
+    branches:
+      - master   # يُشغَّل تلقائياً عند كل push على master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy via FTP to Hostinger
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server:   ${{ secrets.FTP_HOST }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          port:     21
+          protocol: ftp
+          # المجلد المحلي للرفع (. = كل الملفات)
+          local-dir: ./
+          # المجلد على السيرفر (عدّله حسب مسار موقعك)
+          server-dir: /public_html/
+          # ملفات يُستثنى رفعها للسيرفر
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.github/**
+            **/.venv/**
+            **/.vscode/**
+            **/node_modules/**
+            **/.continue/**
+            **/attendance-system-full.zip
+            **/error_log
+            **/res.txt
